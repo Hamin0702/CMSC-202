@@ -1,0 +1,229 @@
+/*****************************************
+** File: MediaPlayer.cpp
+** Project: CMSC 202 Project 5, Fall 2020
+** Author: Hamin Han
+** Date: 12/1/20
+** Section: 202/30
+** Email: haminh1@umbc.edu
+                                                                                                                                                                                                                                        
+** This is the cpp file for the MediaPlayer class in Project 5.
+** A media player object contains a vector for the catalog,
+** and the Tqueue that holds all of the media of the playlist.
+** This file will load in the media files from a given text file and
+** ask the user to either 1. Display Media by Type and Year,
+** 2. Add Media to Playlist, 3. Display Playlist, 4. Sort Playlist by Year
+** or 5. Quit.
+***********************************************/
+
+#include "MediaPlayer.h"
+
+//const int MIN_YEAR = 1958;
+//const int MAX_YEAR = 2020;
+
+// MediaPlayer - Default Constructor
+// Creates a new MediaPlayer
+MediaPlayer::MediaPlayer(){
+    string filename;
+    cout << "What is the media file name?" << endl;
+    cin >> filename;
+    LoadCatalog(filename);
+}
+
+//Tqueue<Media*, 3000> m_playList;
+// MediaPlayer - Overloaded Constructor
+// Creates a new MediaPlayer and passes the media filename
+MediaPlayer::MediaPlayer(string filename){
+    //m_playList = new Tqueue <Media*, 3000> ();
+    LoadCatalog(filename);
+}
+
+// ~MediaPlayer - Destructor
+// Destructs existing MediaPlayer
+MediaPlayer::~MediaPlayer(){
+    
+    //deleting media* in the vector and then clearing the vector itself
+    for(int i = 0; i < m_mediaCatalog.size(); i++){
+        delete m_mediaCatalog.at(i);
+        m_mediaCatalog.at(i) = nullptr;
+    }
+    m_mediaCatalog.clear();
+
+    //deleting media* in the tqueue **
+    for (int i = 0; i < m_playList.Size(); i++){
+        delete m_playList.At(i);
+        m_playList.At(i) = nullptr;
+    }
+
+}
+
+// LoadCatalog
+// Loads the file into the m_mediaCatalog (as media)
+void MediaPlayer::LoadCatalog(string filename){
+    string title = "";
+    string artist = "";
+    string type = "";
+    string yearTemp = "";
+    string rankTemp = "";
+    int year = 0;;
+    int rank = 0;
+    int totalMedia = 0;
+    
+    ifstream inFile;
+    inFile.open(filename);
+    while(!inFile.eof()){
+        
+        //Reading the file
+        if(!inFile.eof()){
+            getline(inFile,title,';');
+            if(title != ""){
+                getline(inFile,artist,';');
+                getline(inFile,type,';');
+                getline(inFile,yearTemp,';');
+                getline(inFile,rankTemp,'\n');
+                year = stoi(yearTemp);
+                rank = stoi(rankTemp);
+                
+                // Adding to m_mediaCatalog
+                m_mediaCatalog.push_back(new Media(title, artist, type, year, rank));
+                totalMedia++;
+            }
+        }
+    }
+    inFile.close();
+    cout << totalMedia << " media files loaded." << endl;
+}
+
+// MainMenu
+// Manages the application and the menu
+void MediaPlayer::MainMenu(){
+    int menuChoice = 0;
+    
+    while(menuChoice != 5){
+        do {
+            menuChoice = 0;
+            cout << "What would you like to do?" << endl;
+            cout << "1. Display Media by Type and Year" << endl;
+            cout << "2. Add Media to Playlist" << endl;
+            cout << "3. Display Playlist" << endl;
+            cout << "4. Sort Playlist by Year" << endl;
+            cout << "5. Quit" << endl;
+            cin >> menuChoice;
+            if(menuChoice < 1 || menuChoice > 5)
+                cout << "Try again, invalid input" << endl;
+        } while (menuChoice < 1 || menuChoice > 5);
+        
+        if(menuChoice == 1){
+            cout << DisplayMedia() << " media found." << endl;
+        }else if(menuChoice == 2){
+            AddMedia();
+        }else if(menuChoice == 3){
+            DisplayPlaylist();
+        }else if(menuChoice == 4){
+            SortPlaylist();
+        }else if(menuChoice == 5){
+            cout << "Thank you for using the UMBC Media Player" << endl;
+        }
+    }
+
+}
+
+// DisplayMedia
+// User enters year (1958-2020)
+// (shows all years even if no media of that type exists for a particular year)
+// Lists all media (numbered) for that year and returns int
+//  of number found with that criteria
+int MediaPlayer::DisplayMedia(){
+    string type;
+    int year;
+    int counter = 0;
+    
+    do {
+        type = "";
+        cout << "Which media type do you want to display?" << endl;
+        cout << "music" << endl;
+        cout << "podcast" << endl;
+        cin >> type;
+        if(type != "music" && type != "podcast")
+            cout << "Invalid type, try again" << endl;
+    } while (type != "music" && type != "podcast");
+    
+    do {
+        year = 0;
+        cout << "Which year would you like to display? (1958-2020)" << endl;
+        cin >> year;
+        if(year < 1958 || year > 2020)
+            cout << "Invalid year, try again" << endl;
+    } while (year < 1958 || year > 2020);
+    
+    cout << "******" << year << "******" << endl;
+    
+    for(int i = 0; i < m_mediaCatalog.size(); i++){
+        if(m_mediaCatalog.at(i)->GetYear() == year && m_mediaCatalog.at(i)->GetType() == type){
+            cout << i+1 << ". " << m_mediaCatalog.at(i)->GetTitle() << " by " << m_mediaCatalog.at(i)->GetArtist() << endl;
+            counter++;
+        }
+    }
+    return counter;
+}
+
+// AddMedia
+//Precondition: m_mediaCatalog is populated
+//Postcondition: Displays the current list and adds media
+//               to the m_playList
+void MediaPlayer::AddMedia(){
+    int availableMedia = 0;
+    int mediaNumber = 0;
+    
+    if(m_playList.IsEmpty()){
+        cout << "The playlist is currently empty" << endl;
+    }
+    
+    cout << "Choose the media you would like to add to the playlist." << endl;
+    
+    availableMedia = DisplayMedia();
+    
+    cout << availableMedia << " media found." << endl;
+    
+    if(availableMedia != 0){
+        do {
+            cout << "Enter the number of the media you would like to add:" << endl;
+            cin >> mediaNumber;
+            if(mediaNumber < 1 || mediaNumber > m_mediaCatalog.size())
+                cout << "Invalid number of media, try again" << endl;
+        } while (mediaNumber < 1 || mediaNumber > m_mediaCatalog.size());
+        
+        mediaNumber--;
+        m_playList.Enqueue(m_mediaCatalog.at(mediaNumber));
+        //Happy by Pharrell Williams added to the playlist
+        cout << m_mediaCatalog.at(mediaNumber)->GetTitle() << " by " << m_mediaCatalog.at(mediaNumber)->GetArtist() << " added to the playlist" << endl;
+    }
+}
+
+// DisplayPlaylist
+//Postcondition: Displays the playlist (will indicate if list is empty)
+void MediaPlayer::DisplayPlaylist(){
+    if(m_playList.IsEmpty()){
+        cout << "The playlist is currently empty" << endl;
+    }else{
+        for(int i = 0; i < m_playList.Size(); i++){
+            cout << i+1 << ". " << *m_playList.At(i);
+        }
+    }
+}
+
+// SortPlaylist
+//Precondition: None (will indicate if list is empty)
+//Postcondition: Sorts the playlist by year
+void MediaPlayer::SortPlaylist(){
+    if(m_playList.IsEmpty()){
+        cout << "The playlist is currently empty" << endl;
+    }else{
+        m_playList.Sort();
+        cout << "Done sorting by year" << endl;
+        cout << m_playList.Size() << " items sorted." << endl;
+    }
+}
+
+  //vector<Media*> m_mediaCatalog; //Holds all media in file
+  //Tqueue<Media*, 3000> m_playList; //Holds all media in play list (capacity 3000 items)
+
